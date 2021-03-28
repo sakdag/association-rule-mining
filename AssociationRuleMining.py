@@ -1,3 +1,4 @@
+import itertools
 import string
 import random
 
@@ -30,4 +31,19 @@ def generate_next_set_of_candidates(itemsets: set[tuple], k: int):
                 itemset_to_add.append(list(itemsets_as_list[j])[k - 1])
                 sorted_set_to_add = sorted(itemset_to_add)
                 next_candidates.add(tuple(sorted_set_to_add))
+    return next_candidates
+
+
+# k is used to represent number of elements in each itemset in original_itemsets
+# Note that itemsets have k+1 number of items in each element
+def eliminate_itemsets_with_non_frequent_items(original_itemsets: set[tuple], itemsets: set[tuple], k: int):
+    next_candidates = set()
+    for itemset in itemsets:
+        is_infrequent = False
+        for combination in itertools.combinations(itemset, k):
+            if not(combination in original_itemsets):
+                is_infrequent = True
+                break
+        if not is_infrequent:
+            next_candidates.add(itemset)
     return next_candidates
