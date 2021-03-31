@@ -81,22 +81,44 @@ def prepare_dataset(dataset_path: string, te):
 
 
 def calculate_apriori_with_mlxtend(dataset, dataframe, te):
-    print(len(apriori(dataframe, min_support=0.02, use_colnames=True)))
+    result_without_partitioning = apriori(dataframe, min_support=0.02, use_colnames=True)
+    print("Number of itemsets after running apriori without partitioning: ", len(result_without_partitioning))
 
     # Divide initial dataset into 5 to 10 chunks, run apriori and compare results
-    for i in range(5, 10):
-        print("For partitions of: ", i)
+    for i in range(5, 11):
+        print("Tests after partitioning the dataset into: ", i)
         partitioned_datasets = list()
         number_of_elements = int(len(dataset) / i)
         number_of_elements_in_last = number_of_elements + (len(dataset) - (i * number_of_elements))
+
+        # Partition initial dataset into chunks calculated above
         for j in range(i):
             current_dataset = list()
             for k in range(j * number_of_elements, (j + 1) * number_of_elements):
                 current_dataset.append(dataset[k])
             partitioned_datasets.append(current_dataset)
+
+        # Get remaining elements to put them into last chunk
         for j in range(number_of_elements, number_of_elements_in_last):
             partitioned_datasets[i - 1].append(dataset[(number_of_elements * (i - 1)) + j])
+        total_list_of_results = list()
+
+        # For each chunk, run apriori and add it to union
         for j in range(i):
             part_te_ary = te.fit(partitioned_datasets[j]).transform(partitioned_datasets[j])
             part_df = pd.DataFrame(part_te_ary, columns=te.columns_)
-            print(len(apriori(part_df, min_support=0.02, use_colnames=True)))
+            result = apriori(part_df, min_support=0.02, use_colnames=True)
+            for element in result["itemsets"].to_list():
+                total_list_of_results.append(tuple(element))
+        #print(len(total_list_of_results))
+
+        # Remove duplicate elements from results
+        union_of_results = set()
+        for result in total_list_of_results:
+            sorted_result = sorted(result)
+            current_names = ""
+            for element in sorted_result:
+                current_names += element
+            union_of_results.add(current_names)
+        print("Number of elements after running apriori in all partitions and taking union of results: ",
+              len(union_of_results))
