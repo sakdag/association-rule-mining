@@ -5,13 +5,15 @@ import csv
 import pandas as pd
 from mlxtend.frequent_patterns import apriori
 
+selected_letters = 'abcdefghijkl'
 
-def create_itemset(num_of_itemsets: int, num_of_item_per_itemset: int):
+
+def create_itemsets(num_of_itemsets: int, num_of_item_per_itemset: int):
     itemsets = set()
     while len(itemsets) != num_of_itemsets:
         current_set = set()
         while len(current_set) != num_of_item_per_itemset:
-            current_set.add(random.choice(string.ascii_lowercase))
+            current_set.add(random.choice(selected_letters))
         sorted_set = sorted(current_set)
         itemsets.add(tuple(sorted_set))
     return itemsets
@@ -82,7 +84,8 @@ def prepare_dataset(dataset_path: string, te):
 
 def calculate_apriori_with_mlxtend(dataset, dataframe, te):
     result_without_partitioning = apriori(dataframe, min_support=0.02, use_colnames=True)
-    print("Number of itemsets after running apriori without partitioning: ", len(result_without_partitioning))
+    len_of_result_wo_partitioning = len(result_without_partitioning)
+    print("Number of itemsets after running apriori without partitioning: ", len_of_result_wo_partitioning, "\n")
 
     # Divide initial dataset into 5 to 10 chunks, run apriori and compare results
     for i in range(5, 11):
@@ -110,7 +113,7 @@ def calculate_apriori_with_mlxtend(dataset, dataframe, te):
             result = apriori(part_df, min_support=0.02, use_colnames=True)
             for element in result["itemsets"].to_list():
                 total_list_of_results.append(tuple(element))
-        #print(len(total_list_of_results))
+        # print(len(total_list_of_results))
 
         # Remove duplicate elements from results
         union_of_results = set()
@@ -120,5 +123,8 @@ def calculate_apriori_with_mlxtend(dataset, dataframe, te):
             for element in sorted_result:
                 current_names += element
             union_of_results.add(current_names)
+        len_of_union_of_results = len(union_of_results)
         print("Number of elements after running apriori in all partitions and taking union of results: ",
-              len(union_of_results))
+              len_of_union_of_results)
+        over_generation_ration = float(len_of_union_of_results) / float(len_of_result_wo_partitioning)
+        print("Over generation ration: ", over_generation_ration, "\n")
