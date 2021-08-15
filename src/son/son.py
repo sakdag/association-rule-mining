@@ -1,74 +1,16 @@
-import itertools
-import string
-import random
 import csv
+import os
+import sys
+import argparse
+
 import pandas as pd
 from mlxtend.frequent_patterns import apriori
+from mlxtend.preprocessing import TransactionEncoder
 
-selected_letters = 'abcdefghijkl'
-
-
-def create_itemsets(num_of_itemsets: int, num_of_item_per_itemset: int):
-    itemsets = set()
-    while len(itemsets) != num_of_itemsets:
-        current_set = set()
-        while len(current_set) != num_of_item_per_itemset:
-            current_set.add(random.choice(selected_letters))
-        sorted_set = sorted(current_set)
-        itemsets.add(tuple(sorted_set))
-    return itemsets
+import src.config.config as conf
 
 
-# k is used to represent number of elements in each itemset in itemsets
-def generate_next_set_of_itemsets(itemsets: set[tuple], k: int):
-    next_itemsets = set()
-    itemsets_as_list = list(itemsets)
-    is_candidate: bool
-    for i in range(len(itemsets_as_list)):
-        for j in range(i + 1, len(itemsets_as_list)):
-            is_candidate = True
-            for m in range(k - 1):
-                if itemsets_as_list[i][m] != itemsets_as_list[j][m]:
-                    is_candidate = False
-                    break
-            if is_candidate:
-                itemset_to_add = list(itemsets_as_list[i])
-                itemset_to_add.append(list(itemsets_as_list[j])[k - 1])
-                sorted_set_to_add = sorted(itemset_to_add)
-                next_itemsets.add(tuple(sorted_set_to_add))
-
-    # Eliminate k+1 item itemsets which include non-frequent k item itemsets
-    pruned_itemsets = set()
-    for itemset in next_itemsets:
-        is_infrequent = False
-        for combination in itertools.combinations(itemset, k):
-            if not (combination in itemsets):
-                is_infrequent = True
-                break
-        if not is_infrequent:
-            pruned_itemsets.add(itemset)
-    return pruned_itemsets
-
-
-# k is used to represent number of elements in each itemset in itemsets
-def generate_next_set_of_naive_itemsets(itemsets: set[tuple], k: int):
-    next_itemsets = set()
-    all_possible_characters = set()
-    for itemset in itemsets:
-        for element in itemset:
-            all_possible_characters.add(element)
-    for itemset in itemsets:
-        current_itemset = list(itemset)
-        for character in all_possible_characters:
-            if character not in current_itemset:
-                next_itemset = list(current_itemset)
-                next_itemset.append(character)
-                sorted_itemset = sorted(next_itemset)
-                next_itemsets.add(tuple(sorted_itemset))
-    return next_itemsets
-
-
-def prepare_dataset(dataset_path: string, te):
+def prepare_dataset(dataset_path: str, te):
     dataset = list()
     with open(dataset_path, "r") as f:
         reader = csv.reader(f, delimiter="\n")
@@ -113,7 +55,7 @@ def calculate_apriori_with_mlxtend(dataset, dataframe, te):
             result = apriori(part_df, min_support=0.02, use_colnames=True)
             for element in result["itemsets"].to_list():
                 total_list_of_results.append(tuple(element))
-        # print(len(total_list_of_results))
+        print(len(total_list_of_results))
 
         # Remove duplicate elements from results
         union_of_results = set()
@@ -128,3 +70,25 @@ def calculate_apriori_with_mlxtend(dataset, dataframe, te):
               len_of_union_of_results)
         over_generation_ration = float(len_of_union_of_results) / float(len_of_result_wo_partitioning)
         print("Over generation ration: ", over_generation_ration, "\n")
+
+
+def main():
+    dirname = os.path.dirname(__file__)
+    dataset_file_path = os.path.join(dirname, conf.GROCERIES_DATASET_FILE_PATH)
+
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--dataset_path',
+                        default=dataset_file_path,
+                        help='absolute path of the dataset you want to use, default: '
+                             '{path to project}/data/raw/groceries.csv')
+    parser_args = parser.parse_args()
+
+    te = TransactionEncoder()
+    dataset, dataframe = prepare_dataset(parser_args.dataset_path, te)
+    print(len(dataframe))
+
+    calculate_apriori_with_mlxtend(dataset, dataframe, te)
+
+
+if __name__ == '__main__':
+    main()
